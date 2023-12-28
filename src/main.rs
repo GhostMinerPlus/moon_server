@@ -19,8 +19,14 @@ struct Config {
 }
 
 fn main() -> io::Result<()> {
+    let arg_v: Vec<String> = std::env::args().collect();
+    let file_name = if arg_v.len() == 2 {
+        arg_v[1].as_str()
+    } else {
+        "config.toml"
+    };
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("INFO")).init();
-    let config_s = fs::read_to_string("config.toml")?;
+    let config_s = fs::read_to_string(file_name)?;
     let config: Config =
         toml::from_str(&config_s).map_err(|e| Error::new(io::ErrorKind::Other, e.message()))?;
     tokio::runtime::Builder::new_multi_thread()
