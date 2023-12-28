@@ -1,6 +1,10 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    Json,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::util::AppState;
@@ -8,7 +12,7 @@ use crate::util::AppState;
 #[derive(Deserialize, Serialize)]
 pub struct ReportInfo {
     name: String,
-    ipv6: String,
+    address: String,
 }
 
 pub async fn http_report(
@@ -18,21 +22,35 @@ pub async fn http_report(
     log::info!("received from {}", report_info.name);
 
     let mut client_v = state.client_v.lock().await;
-    client_v.insert(report_info.name, report_info.ipv6);
+    client_v.insert(report_info.name, report_info.address);
     StatusCode::OK
 }
 
 pub async fn http_list(State(state): State<Arc<AppState>>) -> (StatusCode, String) {
     let client_v = state.client_v.lock().await;
     let mut list = Vec::new();
-    for (name, ipv6) in &*client_v {
+    for (name, address) in &*client_v {
         list.push(ReportInfo {
             name: name.to_string(),
-            ipv6: ipv6.to_string(),
+            address: address.to_string(),
         })
     }
     match serde_json::to_string(&list) {
         Ok(r) => (StatusCode::OK, r),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    }
+}
+
+pub async fn http_get_address(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<HashMap<String, String>>,
+) -> (StatusCode, String) {
+    let client_v = state.client_v.lock().await;
+    match params.get("name") {
+        Some(name) => match client_v.get(name) {
+            Some(address) => (StatusCode::OK, address.clone()),
+            None => (StatusCode::INTERNAL_SERVER_ERROR, String::new()),
+        },
+        None => (StatusCode::INTERNAL_SERVER_ERROR, String::new()),
     }
 }

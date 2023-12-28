@@ -12,7 +12,8 @@ use std::{
 
 #[derive(Deserialize, Clone)]
 struct Config {
-    address: String,
+    ip: String,
+    port: u16,
     name: String,
     thread_num: u8,
 }
@@ -48,11 +49,16 @@ async fn serve(config: &Config) -> io::Result<()> {
             &format!("/{}/list", config.name),
             routing::get(service::http_list),
         )
+        .route(
+            &format!("/{}/get", config.name),
+            routing::get(service::http_get_address),
+        )
         .with_state(Arc::new(util::AppState::default()));
 
     // run our app with hyper, listening globally on port 3000
-    log::info!("serving at {}", config.address);
-    let listener = tokio::net::TcpListener::bind(&config.address).await?;
+    let address = format!("{}:{}", config.ip, config.port);
+    log::info!("serving at {address}");
+    let listener = tokio::net::TcpListener::bind(address).await?;
     axum::serve(listener, app).await.unwrap();
 
     Ok(())
