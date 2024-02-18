@@ -1,6 +1,6 @@
 //! Server that provides registration services.
 
-use std::{future::Future, io, sync::Arc, time::Duration};
+use std::{io, sync::Arc, time::Duration};
 
 use axum::{routing, Router};
 use tokio::time;
@@ -8,18 +8,6 @@ use tokio::time;
 use crate::state;
 
 mod service;
-
-async fn schedual<Task>(duration: Duration, task: Task)
-where
-    Task: Future<Output = io::Result<()>> + std::marker::Send + 'static,
-{
-    tokio::spawn(async move {
-        time::sleep(duration).await;
-        if let Err(e) = task.await {
-            log::error!("{e}");
-        }
-    });
-}
 
 async fn serve(server: &Server) -> io::Result<()> {
     // build our application with a route
@@ -66,12 +54,13 @@ impl Server {
 
     pub async fn run(self) -> io::Result<()> {
         let state = self.state.clone();
-        schedual(Duration::from_secs(60), async move {
-            let mut client_v = state.client_v.lock().await;
-            client_v.clear();
-            Ok(())
-        })
-        .await;
+        tokio::spawn(async move {
+            loop {
+                time::sleep(Duration::from_secs(60)).await;
+                let mut client_v = state.client_v.lock().await;
+                client_v.clear();
+            }
+        });
         serve(&self).await
     }
 }
