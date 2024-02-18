@@ -1,14 +1,13 @@
+//! Registration services.
+
 use std::{collections::HashMap, sync::Arc};
 
-use axum::{
-    extract::{Query, State},
-    http::StatusCode,
-    Json,
-};
+use axum::{extract::{Query, State}, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::util::AppState;
+use crate::state::ServerState;
 
+// Public
 #[derive(Deserialize, Serialize)]
 pub struct ReportInfo {
     name: String,
@@ -16,7 +15,7 @@ pub struct ReportInfo {
 }
 
 pub async fn http_report(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<ServerState>>,
     Json(report_info): Json<ReportInfo>,
 ) -> StatusCode {
     log::info!("received from {}", report_info.name);
@@ -26,7 +25,7 @@ pub async fn http_report(
     StatusCode::OK
 }
 
-pub async fn http_list(State(state): State<Arc<AppState>>) -> (StatusCode, String) {
+pub async fn http_list(State(state): State<Arc<ServerState>>) -> (StatusCode, String) {
     let client_v = state.client_v.lock().await;
     let mut list = Vec::new();
     for (name, address) in &*client_v {
@@ -42,7 +41,7 @@ pub async fn http_list(State(state): State<Arc<AppState>>) -> (StatusCode, Strin
 }
 
 pub async fn http_get_address(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<ServerState>>,
     Query(params): Query<HashMap<String, String>>,
 ) -> (StatusCode, String) {
     let client_v = state.client_v.lock().await;
