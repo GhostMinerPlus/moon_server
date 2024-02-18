@@ -57,3 +57,17 @@ pub async fn http_get_uri(
         None => (StatusCode::INTERNAL_SERVER_ERROR, String::new()),
     }
 }
+
+pub async fn http_delete(
+    State(state): State<Arc<ServerState>>,
+    Query(params): Query<HashMap<String, String>>,
+) -> (StatusCode, String) {
+    let mut client_v = state.client_v.lock().await;
+    match params.get("name") {
+        Some(name) => match client_v.remove(name) {
+            Some(name) => (StatusCode::OK, name),
+            None => (StatusCode::OK, "".to_string()),
+        },
+        None => (StatusCode::INTERNAL_SERVER_ERROR, String::new()),
+    }
+}

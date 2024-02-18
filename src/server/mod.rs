@@ -1,9 +1,8 @@
 //! Server that provides registration services.
 
-use std::{io, sync::Arc, time::Duration};
+use std::{io, sync::Arc};
 
 use axum::{routing, Router};
-use tokio::time;
 
 use crate::state;
 
@@ -23,6 +22,10 @@ async fn serve(server: &Server) -> io::Result<()> {
         .route(
             &format!("/{}/get", server.name),
             routing::get(service::http_get_uri),
+        )
+        .route(
+            &format!("/{}/delete", server.name),
+            routing::get(service::http_delete),
         )
         .with_state(server.state.clone());
 
@@ -53,14 +56,6 @@ impl Server {
     }
 
     pub async fn run(self) -> io::Result<()> {
-        let state = self.state.clone();
-        tokio::spawn(async move {
-            loop {
-                time::sleep(Duration::from_secs(60)).await;
-                let mut client_v = state.client_v.lock().await;
-                client_v.clear();
-            }
-        });
         serve(&self).await
     }
 }
